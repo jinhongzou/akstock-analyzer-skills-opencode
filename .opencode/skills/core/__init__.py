@@ -260,6 +260,18 @@ def analyze_dividend_consistency(code=None, df=None) -> dict:
     return DividendAnalyzer().analyze_dividend_consistency(df=code if df is None else df)
 
 
+def get_yearly_dividend_summary(code: str, current_price: float = None) -> "pd.DataFrame":
+    """获取按年度合并的分红统计（向后兼容）
+    
+    同一年内多次分红合并为年度合计，计算各年股息率。
+    
+    调用方式:
+        get_yearly_dividend_summary(stock_code)
+        get_yearly_dividend_summary(stock_code, current_price=50.0)
+    """
+    return DividendAnalyzer().get_yearly_dividend_summary(code, current_price)
+
+
 # ══════════════════════════════════════════
 # 股东分析（ShareholderAnalyzer）
 # ══════════════════════════════════════════
@@ -349,6 +361,7 @@ __all__ = [
     "calculate_dividend_metrics",
     "get_a_dividend_detail",
     "analyze_dividend_consistency",
+    "get_yearly_dividend_summary",
     "calculate_price_distribution",
     "calculate_buy_strategy",
     "get_top_circulating_holders",

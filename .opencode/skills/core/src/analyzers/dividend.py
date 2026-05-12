@@ -49,18 +49,20 @@ class DividendAnalyzer:
     def calculate_dividend_metrics(self, stock_code: str, profile: dict) -> dict:
         """
         计算分红质量指标：
-          1. 股息率 = 每股年度分红 ÷ 当前股价 × 100%
-             (akshare 的"现金分红-现金分红比例"单位是"每10股派X元"，需 ÷10)
-          2. 股利支付率 = 每股分红 ÷ 每股收益 × 100%
+          1. 股息率 = 最近完整年度每股分红合计 ÷ 当前股价 × 100%
+             (按报告期年份合并同一年内多次分红)
+          2. 股利支付率 = 年度每股分红合计 ÷ 年度每股收益 × 100%
           3. 派现融资比 = 累计分红总额 ÷ 累计融资总额 × 100%
 
         Returns:
-            {股息率, 股息率解读, 股利支付率, 股利支付率解读, 派现融资比, 派现融资比解读}
+            {股息率, 股息率解读, 股利支付率, 股利支付率解读, 派现融资比, 派现融资比解读,
+             annual_dividend_per_share, dividend_year, ...}
         """
         result = {
             "股息率": None, "股息率解读": None,
             "股利支付率": None, "股利支付率解读": None,
             "派现融资比": None, "派现融资比解读": None,
+            "股息率_计算依据": None,
         }
 
         try:
@@ -75,30 +77,69 @@ class DividendAnalyzer:
             except (ValueError, TypeError):
                 pass
 
-            latest = df.iloc[-1] if len(df) > 0 else None
-            if latest is None:
+            # ── 按年度合并分红 ──
+            # 先找现金分红列
+            cash_col = None
+            for c in df.columns:
+                if "现金分红" in str(c):
+                    col_str = str(c)
+                    # 优先选"比例"列（单位是每10股金额），避开"描述"列
+                    if "比例" in col_str or "每" not in col_str:
+                        try:
+                            pd.to_numeric(df[c].dropna().iloc[0], errors="coerce")
+                            cash_col = c
+                            break
+                        except (IndexError, ValueError, TypeError):
+                            continue
+            if cash_col is None:
                 return result
 
-            cash_per_10 = latest.get("现金分红-现金分红比例", None)
-            if cash_per_10 is not None and pd.notna(cash_per_10) and cash_per_10 > 0:
-                cash_per_share = cash_per_10 / 10.0  # 每10股→每股
+            # 按年合并
+            df["_year"] = pd.to_datetime(df["报告期"], errors="coerce").dt.year
+            df["_cash_per_10"] = pd.to_numeric(df[cash_col], errors="coerce")
+            df["_cash_per_share"] = df["_cash_per_10"] / 10.0
+            valid = df[df["_cash_per_10"] > 0].copy()
 
-                # 1. 股息率
-                if current_price and current_price > 0:
-                    dividend_yield = (cash_per_share / current_price) * 100
-                    result["股息率"] = dividend_yield
-                    if dividend_yield >= 5:
-                        result["股息率解读"] = f"{dividend_yield:.2f}% — 高股息，远超银行定存(<3%)和国债(2-3%)"
-                    elif dividend_yield >= 3:
-                        result["股息率解读"] = f"{dividend_yield:.2f}% — 中等股息，高于银行定存"
-                    else:
-                        result["股息率解读"] = f"{dividend_yield:.2f}% — 低股息"
+            if valid.empty:
+                return result
 
-                # 2. 股利支付率
-                eps = latest.get("每股收益", None)
-                if eps is not None and pd.notna(eps) and eps > 0:
-                    payout_ratio = (cash_per_share / eps) * 100
-                    result["股利支付率"] = payout_ratio
+            yearly = valid.groupby("_year").agg(
+                分红次数=("_cash_per_share", "count"),
+                每股合计=("_cash_per_share", "sum"),
+                每10股合计=("_cash_per_10", "sum"),
+                平均每股收益=("每股收益", "mean") if "每股收益" in valid.columns else ("_cash_per_share", "first"),
+            ).reset_index()
+
+            yearly = yearly.sort_values("_year", ascending=False)
+
+            if yearly.empty:
+                return result
+
+            # 取最近完整年度（排除当前可能尚未完成的年份）
+            latest_year = yearly.iloc[0]
+            latest_year_num = int(latest_year["_year"])
+
+            annual_dps = float(latest_year["每股合计"])  # 年度每股总分红
+
+            # 1. 股息率（基于最近完整年度）
+            if current_price and current_price > 0 and annual_dps > 0:
+                dividend_yield = (annual_dps / current_price) * 100
+                result["股息率"] = round(dividend_yield, 2)
+                result["股息率_计算依据"] = f"基于{latest_year_num}年合并分红(每股{annual_dps:.4f}元)÷当前价{current_price}元"
+
+                if dividend_yield >= 5:
+                    result["股息率解读"] = f"{dividend_yield:.2f}% — 高股息，远超银行定存(<3%)和国债(2-3%)"
+                elif dividend_yield >= 3:
+                    result["股息率解读"] = f"{dividend_yield:.2f}% — 中等股息，高于银行定存"
+                else:
+                    result["股息率解读"] = f"{dividend_yield:.2f}% — 低股息"
+
+            # 2. 股利支付率（基于最近完整年度）
+            if "平均每股收益" in latest_year.index and pd.notna(latest_year["平均每股收益"]):
+                annual_eps = float(latest_year["平均每股收益"])
+                if annual_eps > 0:
+                    payout_ratio = (annual_dps / annual_eps) * 100
+                    result["股利支付率"] = round(payout_ratio, 1)
                     if payout_ratio >= 70:
                         result["股利支付率解读"] = f"{payout_ratio:.1f}% — 高分红，大部分利润用于分红"
                     elif payout_ratio >= 30:
@@ -106,45 +147,139 @@ class DividendAnalyzer:
                     else:
                         result["股利支付率解读"] = f"{payout_ratio:.1f}% — 低分红，利润多用于再投资"
 
-                # 3. 派现融资比
-                total_dividend_per_share = sum(
-                    row.get("现金分红-现金分红比例", 0) / 10.0
-                    for _, row in df.iterrows()
-                    if row.get("现金分红-现金分红比例") is not None
-                    and pd.notna(row.get("现金分红-现金分红比例"))
-                    and row.get("现金分红-现金分红比例", 0) > 0
-                )
-                total_shares = latest.get("总股本", None)
-                if total_shares is not None and pd.notna(total_shares) and total_shares > 0:
-                    total_dividend_amount = total_dividend_per_share * total_shares
-                else:
-                    total_dividend_amount = total_dividend_per_share
-
+            # 3. 派现融资比
+            total_dividend_per_share = float(valid["_cash_per_share"].sum())
+            latest_row = df.iloc[-1] if len(df) > 0 else None
+            total_shares = None
+            if latest_row is not None:
                 try:
-                    ipo_info = ak.stock_ipo_summary_cninfo()
-                    stock_row = ipo_info[ipo_info["代码"] == stock_code]
-                    if not stock_row.empty:
-                        total_finance = stock_row.iloc[0].get("实际募资金额", None)
-                        if total_finance is not None and pd.notna(total_finance) and total_finance > 0:
-                            finance_ratio = (total_dividend_amount / (total_finance * 1e8)) * 100
-                            result["派现融资比"] = finance_ratio
-                            if finance_ratio >= 100:
-                                result["派现融资比解读"] = f"{finance_ratio:.1f}% — 分红已超过融资，真正回报股东"
-                            elif finance_ratio >= 50:
-                                result["派现融资比解读"] = f"{finance_ratio:.1f}% — 分红接近融资额，回报良好"
-                            else:
-                                result["派现融资比解读"] = f"{finance_ratio:.1f}% — 分红低于融资，仍在投入期"
+                    total_shares = float(latest_row.get("总股本", 0))
+                except (ValueError, TypeError):
+                    pass
+            if total_shares and total_shares > 0:
+                total_dividend_amount = total_dividend_per_share * total_shares
+            else:
+                total_dividend_amount = total_dividend_per_share
+
+            try:
+                ipo_info = ak.stock_ipo_summary_cninfo()
+                stock_row = ipo_info[ipo_info["代码"] == stock_code]
+                if not stock_row.empty:
+                    total_finance = stock_row.iloc[0].get("实际募资金额", None)
+                    if total_finance is not None and pd.notna(total_finance) and total_finance > 0:
+                        finance_ratio = (total_dividend_amount / (total_finance * 1e8)) * 100
+                        result["派现融资比"] = round(finance_ratio, 1)
+                        if finance_ratio >= 100:
+                            result["派现融资比解读"] = f"{finance_ratio:.1f}% — 分红已超过融资，真正回报股东"
+                        elif finance_ratio >= 50:
+                            result["派现融资比解读"] = f"{finance_ratio:.1f}% — 分红接近融资额，回报良好"
                         else:
-                            result["派现融资比解读"] = "无融资数据"
+                            result["派现融资比解读"] = f"{finance_ratio:.1f}% — 分红低于融资，仍在投入期"
                     else:
-                        result["派现融资比解读"] = "无IPO数据"
-                except Exception:
-                    result["派现融资比解读"] = "暂无融资数据"
+                        result["派现融资比解读"] = "无融资数据"
+                else:
+                    result["派现融资比解读"] = "无IPO数据"
+            except Exception:
+                result["派现融资比解读"] = "暂无融资数据"
 
         except Exception:
             pass
 
         return result
+
+    # ──────────────────────────────────────────
+    # 按年度合并分红统计（新增，2026-05-12）
+    # ──────────────────────────────────────────
+
+    def get_yearly_dividend_summary(self, stock_code: str, current_price: float = None) -> pd.DataFrame:
+        """
+        按报告年度合并统计分红数据，同一年内多次分红合并为年度合计。
+
+        Args:
+            stock_code: 股票代码
+            current_price: 当前股价（可选），用于计算各年股息率
+
+        Returns:
+            DataFrame: 年份, 分红次数, 每10股合计, 每股合计, 股息率(如有股价)
+        """
+        try:
+            df = self._fetch_dividend_data(stock_code)
+            if df.empty or "报告期" not in df.columns:
+                return pd.DataFrame()
+
+            # 列名可能因编码问题，用位置+列名混合匹配
+            cash_col = None
+            for c in df.columns:
+                if "现金分红" in str(c) and "比例" in str(c) and "每" not in str(c):
+                    cash_col = c
+                    break
+            if cash_col is None:
+                # fallback: 取包含"现金分红"且值为数字的列
+                for c in df.columns:
+                    if "现金分红" in str(c):
+                        try:
+                            pd.to_numeric(df[c], errors="coerce")
+                            cash_col = c
+                            break
+                        except (ValueError, TypeError):
+                            continue
+            if cash_col is None:
+                return pd.DataFrame()
+
+            # 解析报告期年份
+            df["_year"] = pd.to_datetime(df["报告期"], errors="coerce").dt.year
+            df = df.dropna(subset=["_year"]).copy()
+            df["_year"] = df["_year"].astype(int)
+
+            # 提取每股现金分红（原始列是每10股金额，÷10得每股）
+            df["_per_10"] = pd.to_numeric(df[cash_col], errors="coerce")
+            df["_per_share"] = df["_per_10"] / 10.0
+
+            # 只保留有实际分红的记录
+            df = df[df["_per_10"] > 0].copy()
+
+            if df.empty:
+                return pd.DataFrame()
+
+            # 按年合并
+            yearly = df.groupby("_year").agg(
+                分红次数=("_per_share", "count"),
+                每10股合计=("_per_10", "sum"),
+                每股合计=("_per_share", "sum"),
+                最近报告期=("报告期", "max"),
+            ).reset_index()
+
+            yearly = yearly.sort_values("_year", ascending=False)
+
+            # 计算股息率
+            yearly["每股合计"] = yearly["每股合计"].round(4)
+            yearly["每10股合计"] = yearly["每10股合计"].round(2)
+
+            if current_price and current_price > 0:
+                yearly["股息率"] = (yearly["每股合计"] / current_price * 100).round(2)
+            else:
+                yearly["股息率"] = None
+
+            yearly = yearly.rename(columns={"_year": "年份"})
+            yearly["年份"] = yearly["年份"].astype(int)
+
+            # 补充方案进度说明
+            if "方案进度" in df.columns:
+                progress_map = df.groupby("_year").apply(
+                    lambda g: "/".join(
+                        sorted(set(str(s) for s in g["方案进度"] if pd.notna(s)))
+                    ),
+                    include_groups=False,
+                ).to_dict()
+                yearly["方案进度"] = yearly["年份"].map(progress_map)
+            else:
+                yearly["方案进度"] = ""
+
+            return yearly[["年份", "分红次数", "每10股合计", "每股合计", "股息率", "方案进度", "最近报告期"]]
+
+        except Exception as e:
+            print(f"  [!] 按年度合并分红统计失败: {e}")
+            return pd.DataFrame()
 
     # ──────────────────────────────────────────
     # 分红配送详情（原 a_dividend.py）
