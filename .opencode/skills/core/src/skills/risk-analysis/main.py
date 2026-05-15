@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 
-from core import analyze_news_risk
 import akshare as ak
 import pandas as pd
 
@@ -140,30 +139,65 @@ def main():
     print("=" * 72)
     print(f"  风险综合分析 — 股票代码: {stock_code}")
     print(f"  分析时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  数据源: 东方财富(新闻) + 新浪财经(分位数)")
+    print(f"  数据源: 东方财富(代码+名称双源搜索) + 新浪财经(分位数)")
     print("=" * 72)
 
     # ============================================================
-    # Step 1: 新闻风险详情
+    # Step 1: 新闻风险详情（双源合并 - 股票代码 + 公司名称）
     # ============================================================
-    print(f"\n[Step 1] 逐条新闻内容与风险评估（东方财富，{news_limit}条）")
+    print(f"\n[Step 1] 逐条新闻内容与风险评估（双源合并，上限{news_limit}条）")
     print("-" * 72)
 
+    # 获取股票名称用于关键词搜索（多策略容错）
+    stock_name = ""
+    # 策略1: stock_individual_info_em（东方财富）
     try:
-        raw_df = ak.stock_news_em(symbol=stock_code).head(news_limit)
-        if raw_df.empty:
-            print("  无新闻数据")
-            news_items = []
-        else:
-            news_items = []
+        info_df = ak.stock_individual_info_em(symbol=stock_code)
+        row_name = info_df[info_df["item"] == "股票简称"]
+        if not row_name.empty:
+            stock_name = str(row_name["value"].values[0]).strip()
+    except Exception:
+        pass
+    # 策略2: 从新闻标题中提取（策略1失败时的备选）
+    if not stock_name:
+        try:
+            fallback_df = ak.stock_news_em(symbol=stock_code)
+            if not fallback_df.empty:
+                first_title = str(fallback_df.iloc[0].get("新闻标题", ""))
+                # 标题格式通常为 "格力电器000651.SZ)...", "格力电器：..."
+                for sep in [f"{stock_code}.SZ", stock_code, "：", ":", " "]:
+                    idx = first_title.find(sep)
+                    if idx > 0:
+                        stock_name = first_title[:idx].strip()
+                        break
+        except Exception:
+            pass
+    if stock_name:
+        print(f"  股票简称: {stock_name}，双渠道搜索中...")
+
+    # 双源采集 + 去重
+    seen_titles = set()
+    news_items = []
+    sources_used = []
+
+    for search_key in [stock_code] if not stock_name else [stock_code, stock_name]:
+        try:
+            raw_df = ak.stock_news_em(symbol=search_key)
+            if raw_df.empty:
+                continue
+            label = f"代码'{search_key}'" if search_key == stock_code else f"名称'{search_key}'"
+            sources_used.append(label)
             for _, row in raw_df.iterrows():
-                title = str(row.get("新闻标题", ""))
+                title = str(row.get("新闻标题", "")).strip()
+                if not title or title in seen_titles:
+                    continue
+                seen_titles.add(title)
                 content = str(row.get("新闻内容", ""))
                 date = str(row.get("发布时间", ""))[:10]
                 source = str(row.get("文章来源", ""))
                 risk = match_news_risk(title, content)
                 news_items.append({
-                    "index": len(news_items) + 1,
+                    "index": 0,  # 稍后重排
                     "title": title,
                     "content": content,
                     "date": date,
@@ -172,9 +206,17 @@ def main():
                     "risk_type": risk["type"],
                     "keywords": risk["keywords"],
                 })
-    except Exception as e:
-        print(f"  新闻数据获取失败: {e}")
-        news_items = []
+                if len(news_items) >= news_limit:
+                    break
+        except Exception:
+            continue
+
+    # 重新编号
+    for i, item in enumerate(news_items):
+        item["index"] = i + 1
+
+    print(f"  搜索渠道: {' + '.join(sources_used)}")
+    print(f"  获取到 {len(news_items)} 条有效新闻（去重后）\n")
 
     # 逐条输出新闻详情
     high_count = 0
@@ -211,16 +253,28 @@ def main():
           (f" | 诚信风险 {integrity_count}" if integrity_count > 0 else ""))
     print(f"  {'=' * 60}")
 
-    # 关键词级联统计（调用 core 分析器做交叉验证）
-    try:
-        news_result = analyze_news_risk(stock_code, news_limit)
-    except Exception:
-        news_result = {"total": len(news_items), "high": high_count, "medium": medium_count,
-                       "low": low_count, "integrity": integrity_count, "alerts": []}
+    # 双源合并后的风险统计
+    alerts = []
+    for item in news_items:
+        if item["keywords"]:
+            alerts.append({
+                "level": item["risk_level"],
+                "type": item["risk_type"],
+                "title": item["title"],
+                "keywords": item["keywords"],
+            })
+    news_result = {
+        "total": len(news_items),
+        "high": high_count,
+        "medium": medium_count,
+        "low": low_count,
+        "integrity": integrity_count,
+        "alerts": alerts,
+    }
 
-    if news_result.get("alerts"):
+    if alerts:
         print(f"\n  --- 关键词匹配风险明细（前10条） ---")
-        for a in news_result["alerts"][:10]:
+        for a in alerts[:10]:
             print(f"    [{a['level']}] {a['title']}")
             print(f"      关键词: {', '.join(a['keywords'][:5])}")
 
