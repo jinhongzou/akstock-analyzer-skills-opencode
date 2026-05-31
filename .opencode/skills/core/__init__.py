@@ -69,6 +69,7 @@ from .src.analyzers import (
     FinancialAnalyzer,
     StockAnalyzer,
     ShareholderAnalyzer,
+    NationalTeamFundTracker,
 )
 from .src.infra import (
     ReportGenerator,
@@ -381,6 +382,7 @@ __all__ = [
     "FinancialAnalyzer",
     "StockAnalyzer",
     "ShareholderAnalyzer",
+    "NationalTeamFundTracker",
     "ReportGenerator",
     "CacheManager",
 ]
