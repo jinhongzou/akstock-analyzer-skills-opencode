@@ -13,12 +13,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from email.header import Header
 from pathlib import Path
 
 # 加载 .env 文件
 def load_env():
     """从 .env 文件加载环境变量"""
-    env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+    env_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", ".env")
     if os.path.exists(env_path):
         with open(env_path, "r", encoding="utf-8") as f:
             for line in f:
@@ -74,9 +75,11 @@ def send_email(to_addr: str, subject: str, body: str, attachments: list = None) 
                 part = MIMEBase("application", "octet-stream")
                 part.set_payload(attachment_data)
                 encoders.encode_base64(part)
+                # RFC 2231/5987 编码中文文件名
                 part.add_header(
                     "Content-Disposition",
-                    f"attachment; filename={filename}"
+                    "attachment",
+                    filename=("utf-8", "", filename)
                 )
                 msg.attach(part)
                 print(f"  [V] 已添加附件: {filename}")
