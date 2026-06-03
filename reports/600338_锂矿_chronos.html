@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHRONOS 事件追踪 - 西藏珠峰 (600338) #锂矿</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
+
+.header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 32px 24px; border-bottom: 1px solid #334155; }
+.header h1 { font-size: 22px; font-weight: 700; color: #f1f5f9; }
+.header h1 em { font-style: normal; color: #a78bfa; }
+.header .meta { display: flex; gap: 24px; margin-top: 10px; font-size: 13px; color: #94a3b8; flex-wrap: wrap; }
+.header .meta span { display: inline-flex; align-items: center; gap: 4px; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+.section { background: #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #334155; }
+.section h2 { font-size: 17px; font-weight: 600; color: #f1f5f9; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #334155; }
+
+/* Stats Grid */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.stat-card { background: #0f172a; padding: 14px; border-radius: 8px; text-align: center; }
+.stat-card .stat-value { font-size: 26px; font-weight: 700; }
+.stat-card .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+/* Year Distribution */
+.year-bar { display: flex; align-items: flex-end; gap: 4px; padding: 16px 0 0; height: 100px; }
+
+/* Timeline */
+.timeline { position: relative; padding: 20px 0; }
+.timeline::before { content: ''; position: absolute; left: 24px; top: 0; bottom: 0; width: 2px; background: #334155; }
+
+.tl-item { position: relative; padding: 0 0 20px 56px; }
+.tl-item:last-child { padding-bottom: 0; }
+
+.tl-dot { position: absolute; left: 17px; top: 4px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid #0f172a; z-index: 2; }
+
+.tl-content { background: #0f172a; padding: 14px 16px; border-radius: 10px; border: 1px solid #334155; transition: all 0.2s; }
+.tl-content:hover { border-color: #6366f1; box-shadow: 0 4px 20px rgba(99,102,241,0.15); }
+
+.tl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.tl-seq { font-size: 10px; color: #475569; background: #1e293b; padding: 1px 6px; border-radius: 3px; }
+.tl-date { font-size: 12px; font-weight: 700; color: #94a3b8; white-space: nowrap; }
+.tl-source { font-size: 11px; padding: 1px 8px; border-radius: 3px; background: #1e293b; color: #64748b; }
+.tl-stage { font-size: 11px; padding: 2px 10px; border-radius: 4px; font-weight: 500; }
+.tl-title { font-size: 13px; color: #e2e8f0; line-height: 1.5; }
+.tl-title-link { font-size: 13px; color: #a5b4fc; line-height: 1.5; text-decoration: none; transition: color 0.2s; }
+.tl-title-link:hover { color: #818cf8; text-decoration: underline; }
+.tl-link { font-size: 11px; color: #64748b; text-decoration: none; margin-left: auto; display: inline-flex; align-items: center; gap: 2px; transition: color 0.2s; }
+.tl-link:hover { color: #818cf8; }
+.link-icon { font-size: 10px; }
+.tl-content-summary { font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 6px; padding-top: 6px; border-top: 1px solid #1e293b; }
+.tl-analysis { font-size: 12px; color: #a5b4fc; line-height: 1.6; margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: rgba(99,102,241,0.08); border-left: 2px solid rgba(99,102,241,0.3); }
+.analysis-placeholder { color: #475569; font-style: italic; font-size: 12px; }
+
+/* Filter buttons */
+.filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.filter-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #334155; background: transparent; color: #94a3b8; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.filter-btn:hover { border-color: #6366f1; color: #e2e8f0; }
+.filter-btn.active { background: rgba(99,102,241,0.2); border-color: #6366f1; color: #a5b4fc; }
+
+/* Summary card */
+.summary { background: #0f172a; border-radius: 8px; padding: 16px; margin-top: 12px; font-size: 13px; color: #94a3b8; line-height: 1.8; }
+.summary strong { color: #e2e8f0; }
+
+.scroll-top { position: fixed; bottom: 30px; right: 30px; width: 44px; height: 44px; border-radius: 50%; background: #6366f1; color: #fff; border: none; font-size: 20px; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(99,102,241,0.3); z-index: 100; }
+.scroll-top:hover { background: #4f46e5; }
+
+.footer { text-align: center; padding: 24px; color: #475569; font-size: 12px; border-top: 1px solid #334155; margin-top: 40px; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.tl-item { animation: fadeIn 0.3s ease-out; }
+
+@media (max-width: 640px) {
+    .header h1 { font-size: 18px; }
+    .header .meta { gap: 12px; font-size: 12px; }
+    .tl-title { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>⏳ CHRONOS 事件追踪 · <em>#锂矿</em></h1>
+    <div class="meta">
+        <span>🏷️ <strong>西藏珠峰 (600338)</strong></span>
+        <span>📅 回溯: 1825 天</span>
+        <span>🕐 2026-06-03 19:53</span>
+        <span>📰 16 条事件</span>
+        <span>📋 8 公告 / 📰 8 新闻</span>
+    </div>
+</div>
+
+<div class="container">
+
+<!-- 统计概览 -->
+<div class="section">
+    <h2>📊 事件概览</h2>
+    <div class="stats-grid">
+        <div class="stat-card" style="border-top:3px solid #a78bfa;">
+            <div class="stat-value" style="color:#a78bfa;">16</div>
+            <div class="stat-label">📰 事件总数</div>
+        </div>
+        <div class="stat-card" style="border-top:3px solid #60a5fa;">
+            <div class="stat-value" style="color:#60a5fa;">8</div>
+            <div class="stat-label">📋 公告</div>
+        </div>
+        <div class="stat-card" style="border-top:3px solid #fbbf24;">
+            <div class="stat-value" style="color:#fbbf24;">8</div>
+            <div class="stat-label">📰 新闻</div>
+        </div>
+
+            <div class="stat-card" style="border-top:3px solid #60a5fa;">
+                <div class="stat-value" style="color:#60a5fa;">3</div>
+                <div class="stat-label">📋 预备期</div>
+            </div>
+            <div class="stat-card" style="border-top:3px solid #fbbf24;">
+                <div class="stat-value" style="color:#fbbf24;">11</div>
+                <div class="stat-label">🔧 实施期</div>
+            </div>
+            <div class="stat-card" style="border-top:3px solid #34d399;">
+                <div class="stat-value" style="color:#34d399;">1</div>
+                <div class="stat-label">✅ 完成期</div>
+            </div>
+            <div class="stat-card" style="border-top:3px solid #94a3b8;">
+                <div class="stat-value" style="color:#94a3b8;">1</div>
+                <div class="stat-label">📌 其他</div>
+            </div>
+    </div>
+</div>
+
+<!-- 年度分布 -->
+<div class="section">
+    <h2>📅 年度分布</h2>
+    <div class="year-bar">
+<div style="flex:1;text-align:center;font-size:11px;color:#64748b;"><div style="background:#6366f1;height:14px;max-height:60px;border-radius:4px 4px 0 0;margin:0 2px;" title="2022: 1条"></div><span>2022</span><br><span style="font-weight:600;color:#e2e8f0;">1</span></div><div style="flex:1;text-align:center;font-size:11px;color:#64748b;"><div style="background:#6366f1;height:29px;max-height:60px;border-radius:4px 4px 0 0;margin:0 2px;" title="2023: 2条"></div><span>2023</span><br><span style="font-weight:600;color:#e2e8f0;">2</span></div><div style="flex:1;text-align:center;font-size:11px;color:#64748b;"><div style="background:#6366f1;height:57px;max-height:60px;border-radius:4px 4px 0 0;margin:0 2px;" title="2024: 4条"></div><span>2024</span><br><span style="font-weight:600;color:#e2e8f0;">4</span></div><div style="flex:1;text-align:center;font-size:11px;color:#64748b;"><div style="background:#6366f1;height:29px;max-height:60px;border-radius:4px 4px 0 0;margin:0 2px;" title="2025: 2条"></div><span>2025</span><br><span style="font-weight:600;color:#e2e8f0;">2</span></div><div style="flex:1;text-align:center;font-size:11px;color:#64748b;"><div style="background:#6366f1;height:100px;max-height:60px;border-radius:4px 4px 0 0;margin:0 2px;" title="2026: 7条"></div><span>2026</span><br><span style="font-weight:600;color:#e2e8f0;">7</span></div>
+    </div>
+</div>
+
+<!-- 事件时间线 -->
+<div class="section">
+    <h2>📰 <em>锂矿</em> 事件时间线</h2>
+    <div class="filter-bar" id="filterBar">
+        <button class="filter-btn active" data-stage="all" onclick="filterTimeline('all')">全部</button>
+        <button class="filter-btn" data-stage="预备期" onclick="filterTimeline('预备期')" style="border-color:#60a5fa40;color:#60a5fa;">📋 预备期</button>
+        <button class="filter-btn" data-stage="实施期" onclick="filterTimeline('实施期')" style="border-color:#fbbf2440;color:#fbbf24;">🔧 实施期</button>
+        <button class="filter-btn" data-stage="完成期" onclick="filterTimeline('完成期')" style="border-color:#34d39940;color:#34d399;">✅ 完成期</button>
+        <button class="filter-btn" data-stage="其他" onclick="filterTimeline('其他')" style="border-color:#94a3b840;color:#94a3b8;">📌 其他</button>
+    </div>
+    <div class="timeline" id="timeline">
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#1</span>
+                    <span class="tl-date">2022-10-15</span>
+                    <span class="tl-source">公告</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://static.cninfo.com.cn/finalpage/2022-10-15/1214794253.PDF" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://static.cninfo.com.cn/finalpage/2022-10-15/1214794253.PDF" target="_blank" class="tl-title-link" title="查看原文">关于公司实控阿根廷孙公司提交环评报告的进展公告</a></div>
+                
+                <div class="tl-analysis" data-seq="1"><div class="analysis-placeholder">[关键节点] 阿根廷孙公司正式提交环评报告，安赫莱斯锂盐湖项目的审批流程正式启动。影响：正面 - 重大 - 环评是整个项目最关键的监管审批环节，标志着项目从前期准备进入审批阶段</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#2</span>
+                    <span class="tl-date">2023-03-17</span>
+                    <span class="tl-source">公告</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://static.cninfo.com.cn/finalpage/2023-03-17/1216136081.PDF" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://static.cninfo.com.cn/finalpage/2023-03-17/1216136081.PDF" target="_blank" class="tl-title-link" title="查看原文">关于公司实控阿根廷孙公司环评报告的进展公告</a></div>
+                
+                <div class="tl-analysis" data-seq="2"><div class="analysis-placeholder">[常规进展] 环评仍在审核中，提交后5个月无实质性突破。影响：中性 - 中等 - 阿根廷审批效率低于预期，项目建设时间线面临不确定性</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#3</span>
+                    <span class="tl-date">2023-08-02</span>
+                    <span class="tl-source">公告</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://static.cninfo.com.cn/finalpage/2023-08-02/1217444704.PDF" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://static.cninfo.com.cn/finalpage/2023-08-02/1217444704.PDF" target="_blank" class="tl-title-link" title="查看原文">关于公司实控阿根廷孙公司环评报告的进展公告</a></div>
+                
+                <div class="tl-analysis" data-seq="3"><div class="analysis-placeholder">[常规进展] 环评审核仍在进行，提交后已近10个月。影响：中性 - 中等 - 持续等待监管审批，进度慢于市场预期</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#4</span>
+                    <span class="tl-date">2024-02-28</span>
+                    <span class="tl-source">公告</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://static.cninfo.com.cn/finalpage/2024-02-28/1219197892.PDF" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://static.cninfo.com.cn/finalpage/2024-02-28/1219197892.PDF" target="_blank" class="tl-title-link" title="查看原文">关于公司实控阿根廷孙公司环评报告的进展公告</a></div>
+                
+                <div class="tl-analysis" data-seq="4"><div class="analysis-placeholder">[常规进展] 环评审核进入第17个月，仍未取得批复。影响：负面 - 中等 - 审批周期远超预期，项目开工建设时间持续推后</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#5</span>
+                    <span class="tl-date">2024-04-30</span>
+                    <span class="tl-source">公告</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://static.cninfo.com.cn/finalpage/2024-04-30/1219928362.PDF" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://static.cninfo.com.cn/finalpage/2024-04-30/1219928362.PDF" target="_blank" class="tl-title-link" title="查看原文">关于公司实控阿根廷孙公司环评报告的进展公告</a></div>
+                
+                <div class="tl-analysis" data-seq="5"><div class="analysis-placeholder">[常规进展] 环评审核持续进行，已超19个月。影响：中性 - 轻微 - 常规进度更新，市场已对审批延迟有一定预期</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#6</span>
+                    <span class="tl-date">2024-05-31</span>
+                    <span class="tl-source">公告</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://static.cninfo.com.cn/finalpage/2024-05-31/1220213361.PDF" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://static.cninfo.com.cn/finalpage/2024-05-31/1220213361.PDF" target="_blank" class="tl-title-link" title="查看原文">关于公司实控阿根廷孙公司环评报告的进展公告</a></div>
+                
+                <div class="tl-analysis" data-seq="6"><div class="analysis-placeholder">[常规进展] 第8份环评进展公告，审批接近20个月。影响：中性 - 轻微 - 市场等待最终结果</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="完成期">
+            <div class="tl-dot" style="background:#34d399;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#7</span>
+                    <span class="tl-date">2024-07-02</span>
+                    <span class="tl-source">公告</span>
+                    <span class="tl-stage" style="background:rgba(52,211,153,0.2);color:#34d399;">✅ 完成期</span>
+                    <a href="http://static.cninfo.com.cn/finalpage/2024-07-02/1220512564.PDF" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://static.cninfo.com.cn/finalpage/2024-07-02/1220512564.PDF" target="_blank" class="tl-title-link" title="查看原文">关于公司实控阿根廷孙公司取得环评批复的公告</a></div>
+                
+                <div class="tl-analysis" data-seq="7"><div class="analysis-placeholder">[关键里程碑] 历经近两年审批（2022年10月提交），终于获得环评批复！安赫莱斯锂盐湖项目取得最重大的监管许可突破。影响：正面 - 重大 - 扫清法律障碍，项目从审批阶段迈入实质性建设阶段</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#8</span>
+                    <span class="tl-date">2025-12-09</span>
+                    <span class="tl-source">新闻</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://finance.eastmoney.com/a/202512093586691028.html" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://finance.eastmoney.com/a/202512093586691028.html" target="_blank" class="tl-title-link" title="查看原文">西藏珠峰：阿根廷安赫莱斯项目目前仍处于建设阶段，没有投产</a></div>
+                
+                <div class="tl-analysis" data-seq="8"><div class="analysis-placeholder">[常规进展] 环评批复17个月后，项目仍处于建设阶段未投产。影响：中性 - 中等 - 项目建设进度是市场持续关注的核心问题</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#9</span>
+                    <span class="tl-date">2025-12-24</span>
+                    <span class="tl-source">新闻</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://finance.eastmoney.com/a/202512243600816277.html" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://finance.eastmoney.com/a/202512243600816277.html" target="_blank" class="tl-title-link" title="查看原文">西藏珠峰：阿根廷安赫莱斯项目目前仍处于建设阶段，该项目先期1万吨设备已经运达现场</a></div>
+                
+                <div class="tl-analysis" data-seq="9"><div class="analysis-placeholder">[积极信号] 先期1万吨产能设备已运达现场，项目建设取得实质性物理进展。影响：正面 - 重大 - 设备到场意味着建设从纸面审批进入工程实施阶段</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#10</span>
+                    <span class="tl-date">2026-02-26</span>
+                    <span class="tl-source">新闻</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://finance.eastmoney.com/a/202602263655406946.html" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://finance.eastmoney.com/a/202602263655406946.html" target="_blank" class="tl-title-link" title="查看原文">西藏珠峰：阿根廷安赫莱斯项目目前仍处于建设阶段</a></div>
+                
+                <div class="tl-analysis" data-seq="10"><div class="analysis-placeholder">[常规进展] 安赫莱斯项目建设持续推进中。影响：中性 - 轻微 - 常规进度更新</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#11</span>
+                    <span class="tl-date">2026-03-26</span>
+                    <span class="tl-source">新闻</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://finance.eastmoney.com/a/202603263685554549.html" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://finance.eastmoney.com/a/202603263685554549.html" target="_blank" class="tl-title-link" title="查看原文">西藏珠峰：阿根廷安赫莱斯项目目前仍处于建设阶段，尚未投产</a></div>
+                
+                <div class="tl-analysis" data-seq="11"><div class="analysis-placeholder">[常规进展] 项目建设中未投产，管理层表态将做好资源开发回报投资者。影响：中性 - 轻微 - 仍在建设期，关注后续资金投入节奏</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="实施期">
+            <div class="tl-dot" style="background:#fbbf24;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#12</span>
+                    <span class="tl-date">2026-03-26</span>
+                    <span class="tl-source">新闻</span>
+                    <span class="tl-stage" style="background:rgba(251,191,36,0.2);color:#fbbf24;">🔧 实施期</span>
+                    <a href="http://finance.eastmoney.com/a/202603263685518097.html" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://finance.eastmoney.com/a/202603263685518097.html" target="_blank" class="tl-title-link" title="查看原文">西藏珠峰：阿根廷安赫莱斯项目先期1万吨设备已经运达现场</a></div>
+                
+                <div class="tl-analysis" data-seq="12"><div class="analysis-placeholder">[积极信号] 再次确认先期1万吨设备运达现场，公司表示将基于技术方案优化和资金安排尽快实现锂资源规模化开发。影响：正面 - 重大 - 明确推进锂资源开发战略方向</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="预备期">
+            <div class="tl-dot" style="background:#60a5fa;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#13</span>
+                    <span class="tl-date">2026-04-24</span>
+                    <span class="tl-source">新闻</span>
+                    <span class="tl-stage" style="background:rgba(96,165,250,0.2);color:#60a5fa;">📋 预备期</span>
+                    <a href="http://finance.eastmoney.com/a/202604243718421448.html" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://finance.eastmoney.com/a/202604243718421448.html" target="_blank" class="tl-title-link" title="查看原文">西藏珠峰：拟7000万美元出售阿根廷托萨公司100%股权</a></div>
+                
+                <div class="tl-analysis" data-seq="13"><div class="analysis-placeholder">[重大事件] 公告称拟出售阿根廷托萨公司100%股权，交易价7000万美元。需确认托萨公司的资产范围——若托萨持有安赫莱斯盐湖项目权益，则意味着退出锂矿业务；若非核心资产则是正常剥离。影响：待评估 - 重大 - 需阅读公告原文确认</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="预备期">
+            <div class="tl-dot" style="background:#60a5fa;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#14</span>
+                    <span class="tl-date">2026-04-24</span>
+                    <span class="tl-source">新闻</span>
+                    <span class="tl-stage" style="background:rgba(96,165,250,0.2);color:#60a5fa;">📋 预备期</span>
+                    <a href="http://finance.eastmoney.com/a/202604243718550649.html" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://finance.eastmoney.com/a/202604243718550649.html" target="_blank" class="tl-title-link" title="查看原文">西藏珠峰拟7000万美元出售阿根廷托萨公司 聚焦核心盐湖业务</a></div>
+                
+                <div class="tl-analysis" data-seq="14"><div class="analysis-placeholder">[战略解读] 媒体解读称出售意在「聚焦核心盐湖业务」，表明托萨公司可能为非核心资产，出售后公司将集中资源做盐湖锂。影响：正面 - 中等 - 若解读准确则利好锂矿战略专注度</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="其他">
+            <div class="tl-dot" style="background:#94a3b8;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#15</span>
+                    <span class="tl-date">2026-04-25</span>
+                    <span class="tl-source">公告</span>
+                    <span class="tl-stage" style="background:rgba(148,163,184,0.15);color:#94a3b8;">📌 其他</span>
+                    <a href="http://static.cninfo.com.cn/finalpage/2026-04-25/1225194205.PDF" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://static.cninfo.com.cn/finalpage/2026-04-25/1225194205.PDF" target="_blank" class="tl-title-link" title="查看原文">关于出售公司实控阿根廷托萨公司股权的公告</a></div>
+                
+                <div class="tl-analysis" data-seq="15"><div class="analysis-placeholder">[重大事件] 正式公告出售阿根廷托萨公司股权，这是官方披露。影响：待评估 - 重大 - 建议阅读PDF公告原文确认托萨与安赫莱斯项目的关系</div></div>
+            </div>
+        </div>
+        <div class="tl-item" data-stage="预备期">
+            <div class="tl-dot" style="background:#60a5fa;"></div>
+            <div class="tl-content">
+                <div class="tl-head">
+                    <span class="tl-seq">#16</span>
+                    <span class="tl-date">2026-04-25</span>
+                    <span class="tl-source">新闻</span>
+                    <span class="tl-stage" style="background:rgba(96,165,250,0.2);color:#60a5fa;">📋 预备期</span>
+                    <a href="http://finance.eastmoney.com/a/202604253718613754.html" target="_blank" class="tl-link" title="查看原文"><span class="link-icon">🔗</span> 原文</a>
+                </div>
+                <div class="tl-title"><a href="http://finance.eastmoney.com/a/202604253718613754.html" target="_blank" class="tl-title-link" title="查看原文">西藏珠峰计划出售阿根廷托萨公司全部股权 交易作价7000万美元</a></div>
+                
+                <div class="tl-analysis" data-seq="16"><div class="analysis-placeholder">[交易细节] 交易对价由4000万美元固定支付+3000万美元产量挂钩里程碑对价组成，结构包含业绩对赌性质。影响：待评估 - 重大 - 产量挂钩对价暗示托萨公司可能具备实际生产能力</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 事件摘要 -->
+<div class="section">
+    <h2>📝 事件摘要</h2>
+    <div class="summary">
+        <p><strong>追踪关键词</strong>：#锂矿</p>
+        <p><strong>时间跨度</strong>：2022-10-15 ~ 2026-04-25</p>
+        <p><strong>事件总量</strong>：16 条（公告 8 条 / 新闻 8 条）</p>
+        <p><strong>阶段分布</strong>：预备期(3) → 实施期(11) → 完成期(1)</p>
+        <p><strong>最早事件</strong>：2022-10-15 — 关于公司实控阿根廷孙公司提交环评报告的进展公告</p>
+        <p><strong>最近事件</strong>：2026-04-25 — 西藏珠峰计划出售阿根廷托萨公司全部股权 交易作价7000万美元</p>
+        <p><strong>年度分布</strong>：2022: 1条 · 2023: 2条 · 2024: 4条 · 2025: 2条 · 2026: 7条</p>
+    </div>
+</div>
+
+</div>
+
+<button class="scroll-top" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<div class="footer">
+    <p>📊 数据来源: 巨潮资讯网（公告）· 东方财富（新闻）</p>
+    <p>⚙️ CHRONOS 事件追踪 · 纯规则驱动，不含 LLM 分析</p>
+    <p>⚠️ 本分析仅供参考，不构成投资建议。</p>
+</div>
+
+<script>
+// 阶段过滤
+function filterTimeline(stage) {
+    const items = document.querySelectorAll('.tl-item');
+    const btns = document.querySelectorAll('.filter-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    const activeBtn = document.querySelector(`.filter-btn[data-stage="${stage}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    items.forEach(item => {
+        if (stage === 'all' || item.dataset.stage === stage) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+// 滚动返回顶部
+window.addEventListener('scroll', function() {
+    const btn = document.getElementById('scrollTopBtn');
+    btn.style.display = window.scrollY > 400 ? 'flex' : 'none';
+});
+</script>
+
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 ## Repository Overview
 
-A股股票分析 OpenCode Skills 集合，基于 akshare 数据源。包含 17 个独立 Skill，可单独使用也可组合输出完整报告。
+A股股票分析 OpenCode Skills 集合，基于 akshare 数据源。包含 18 个独立 Skill，可单独使用也可组合输出完整报告。
 
 ## Key Entry Points
 
@@ -22,6 +22,8 @@ skill(name="akshare-docs")        # AKshare API 文档查询
 skill(name="risk-analysis")       # 综合风控（新闻+分位数）
 skill(name="web-search")          # 网络实时搜索
 skill(name="valuation-anchor")    # 估值锚点分析
+skill(name="cninfo-search")       # 巨潮资讯网公告搜索
+skill(name="chronos-timeline")    # CHRONOS 事件追踪分析
 ```
 
 ### 命令行运行方式（全部迁移到 core/src/skills/）
@@ -41,6 +43,11 @@ python .opencode/skills/core/src/skills/akshare-docs/main.py "stock_zh_a_spot"
 python .opencode/skills/core/src/skills/web-search/main.py "查询内容"
 python .opencode/skills/core/src/skills/risk-analysis/main.py 600519
 python .opencode/skills/core/src/skills/valuation-anchor/main.py 600519
+python .opencode/skills/core/src/skills/cninfo-search/main.py 600519
+python .opencode/skills/core/src/skills/chronos-timeline/main.py 600519 回购
+python .opencode/skills/core/src/skills/chronos-timeline/main.py 600519 利润分配 365
+python .opencode/skills/core/src/skills/chronos-timeline/main.py 600338 锂矿 --relax --export-candidates cand.json   # 宽松匹配导出候选，供 AI 标注
+python .opencode/skills/core/src/skills/chronos-timeline/main.py --build-report annotated.json               # 从 AI 标注构建 HTML 报告
 ```
 
 ## Architecture
@@ -65,7 +72,7 @@ stock-analyzer-skills_tushare/           # 项目根目录
 │       │       ├── __init__.py
 │       │       ├── config/
 │   │       │   └── .env             # ⚠️ 统一配置文件（Tushare Token/SMTP/Tavily API Key）
-│       │       ├── analyzers/           # 分析器层，8 个 Analyzer 类
+│       │       ├── analyzers/           # 分析器层，9 个 Analyzer 类
 │       │       │   ├── __init__.py
 │       │       │   ├── market.py        # MarketAnalyzer（市场分析）
 │       │       │   ├── technical.py     # TechnicalAnalyzer（技术分析）
@@ -73,15 +80,17 @@ stock-analyzer-skills_tushare/           # 项目根目录
 │       │       │   ├── dividend.py      # DividendAnalyzer（分红配送）
 │       │       │   ├── financial.py     # FinancialAnalyzer（财务健康 + ROCE）
 │       │       │   ├── stock.py         # StockAnalyzer（个股估值 + 估值锚点）
-│       │       │   └── shareholder.py   # ShareholderAnalyzer（股东分析）
+│       │       │   ├── shareholder.py   # ShareholderAnalyzer（股东分析）
+│       │       │   └── etf.py           # NationalTeamFundTracker（国家队ETF）
 │       │       ├── infra/               # 基础设施层
 │       │       │   ├── __init__.py
 │       │       │   ├── cache.py         # CacheManager（缓存）
 │       │       │   └── report.py        # ReportGenerator（评分 + 报告导出）
-│       │       └── skills/              # 14 个 Skill 入口（薄封装层）
+│       │       └── skills/              # 19 个 Skill 入口（薄封装层）
 │       │           ├── stock-analyzer/main.py
 │       │           ├── technical-analyzer/main.py
 │       │           ├── a-dividend-analyzer/main.py
+│       │           ├── buffett-checklist/main.py
 │       │           ├── roce-calculator/main.py
 │       │           ├── market-analyzer/main.py
 │       │           ├── percentile-analyzer/main.py
@@ -93,7 +102,10 @@ stock-analyzer-skills_tushare/           # 项目根目录
 │       │           ├── akshare-docs/main.py
 │       │           ├── market-systemic-risk/main.py
 │       │           ├── industry-analysis/main.py
-│       │           └── web-search/main.py
+│       │           ├── national-team-fund-tracker/main.py
+│       │           ├── web-search/main.py
+│       │           ├── cninfo-search/main.py
+│       │           └── chronos-timeline/main.py
 │       └── [skill-name]/             # 各 Skill 目录（SKILL.md + 旧入口）
 │           ├── SKILL.md
 │           └── scripts/              # 已迁移到 core/src/skills/
@@ -168,6 +180,7 @@ stock-analyzer-skills_tushare/           # 项目根目录
 | risk-analysis | 股票代码 [新闻条数] | 综合风控（新闻风险+分位数） |
 | web-search | 查询内容 | 网络实时检索 |
 | valuation-anchor | 股票代码 | 估值锚点分析 |
+| chronos-timeline | 股票代码 事件关键词 [天数] [--relax] [--export-candidates] [--build-report] | CHRONOS 事件追踪分析（支持 AI 辅助语义匹配） |
 
 ### 综合评分体系（6 维度，总分 100 分）
 - 盈利能力（20 分）：ROCE 绝对值 + 趋势

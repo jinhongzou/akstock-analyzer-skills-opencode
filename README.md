@@ -10,7 +10,7 @@
 **回测** SKILL开发中
 ## 特点
 
-- 🀆 **22 个独立 Skill**：可按需单独使用，也可一键输出完整投资报告
+- 🀆 **23 个独立 Skill**：可按需单独使用，也可一键输出完整投资报告
 - 🔆 **共享核心架构**：所有 Skill 统一引用 `core/` 核心逻辑层，保证数据一致性与零代码重复
 - 🆓 **6 维评分体系**：盈利能力 / 财务安全 / 估值合理性 / 技术面 / 业务前景 / 新闻风险，满分 120 分
 - 🆗 **多数据源融合**：Tushare Pro（个股估值/行情🔄）、新浪财经（财务报表/K线）、东方财富（新闻/分红）、乐咕（市场PE）
@@ -37,6 +37,8 @@
 | `pdf-converter` | PDF 转 Markdown 格式 | PDF 路径 | PDF 解析 |
 | `akshare-docs` | AKshare API 文档查询 | 关键词 | 文档检索 |
 | `web-search` | 网络实时搜索 | 查询内容 | Tavily |
+| `cninfo-search` | 巨潮资讯网公告搜索（含PDF下载链接） | 股票代码或公司名称 | cninfo API |
+| `chronos-timeline` | CHRONOS 事件时间线分析（不含股价数据，支持 AI 辅助语义匹配） | 股票代码 + 关键词 | cninfo + 新闻 |
 | `buffett-checklist` | 巴菲特7关检查清单（聚合9个分析器数据） | 股票代码 | 多Analyzer聚合 |
 | `financial-analysis` | 深度财务分析（6维度评分卡+4项红旗筛查） | 股票代码 | `FinancialAnalyzer` |
 | `percentile-analyzer` | 历史分位数分析（3月/1年/3年/5年） | 股票代码 | 分位数计算 |
@@ -75,7 +77,7 @@ stock-analyzer-skills_tushare/           # 项目根目录
 │       │       │   ├── __init__.py
 │       │       │   ├── cache.py         # CacheManager（缓存）
 │       │       │   └── report.py        # ReportGenerator（评分 + 报告导出）
-│       │       └── skills/              # 17 个 Skill 入口（薄封装层）
+│       │       └── skills/              # 19 个 Skill 入口（薄封装层）
 │       │           ├── stock-analyzer/main.py
 │       │           ├── technical-analyzer/main.py
 │       │           ├── a-dividend-analyzer/main.py
@@ -92,7 +94,9 @@ stock-analyzer-skills_tushare/           # 项目根目录
 │       │           ├── market-systemic-risk/main.py
 │       │           ├── industry-analysis/main.py
 │       │           ├── national-team-fund-tracker/main.py
-│       │           └── web-search/main.py
+│       │           ├── web-search/main.py
+│       │           ├── cninfo-search/main.py
+│       │           └── chronos-timeline/main.py
 │       └── [skill-name]/             # 各 Skill 目录（SKILL.md + 旧入口）
 │           ├── SKILL.md
 │           └── scripts/              # 已迁移到 core/src/skills/
@@ -110,7 +114,7 @@ stock-analyzer-skills_tushare/           # 项目根目录
 | **向后兼容层** | `core/__init__.py` | 27 个包装函数 + 11 个类导出，委托给下层 Analyzer 类 |
 | **分析器层** | `core/src/analyzers/` | 9 个 Analyzer 类，数据获取 + 计算逻辑 |
 | **基础设施层** | `core/src/infra/` | CacheManager + ReportGenerator |
-| **入口层** | `core/src/skills/` | 17 个 skill 的 `main.py`，参数解析 + 格式化输出 |
+| **入口层** | `core/src/skills/` | 18 个 skill 的 `main.py`，参数解析 + 格式化输出 |
 
 ---
 
@@ -201,6 +205,8 @@ skill(name="web-search")
 skill(name="national-team-fund-tracker")
 skill(name="darwinian_value_investing")
 skill(name="munger_value_investing")
+skill(name="cninfo-search")
+skill(name="chronos-timeline")
 ```
 
 ### 命令行运行
@@ -224,6 +230,10 @@ python .opencode/skills/core/src/skills/pdf-converter/main.py "file.pdf"
 python .opencode/skills/core/src/skills/akshare-docs/main.py "stock_zh_a_spot"
 python .opencode/skills/core/src/skills/web-search/main.py "查询内容"
 python .opencode/skills/core/src/skills/national-team-fund-tracker/main.py
+python .opencode/skills/core/src/skills/cninfo-search/main.py 600519
+python .opencode/skills/core/src/skills/chronos-timeline/main.py 600519 回购
+python .opencode/skills/core/src/skills/chronos-timeline/main.py 600338 锂矿 --relax --export-candidates cand.json
+python .opencode/skills/core/src/skills/chronos-timeline/main.py --build-report annotated.json
 ```
 
 ---
@@ -570,6 +580,7 @@ A multi-dimensional A-share stock analysis OpenCode Skill set based on **Tushare
 | `pdf-converter` | PDF to Markdown conversion | PDF path | PDF parser |
 | `akshare-docs` | AKshare API documentation lookup | Keywords | Doc search |
 | `web-search` | Real-time web search | Query text | Tavily |
+| `cninfo-search` | CNINFO announcement search (with PDF download links) | Stock code or name | cninfo API |
 | `buffett-checklist` | Buffett 7-gate checklist (aggregates 9 analyzers) | Stock code | Multi-analyzer |
 | `financial-analysis` | Deep financial analysis (6D scorecard + 4 red flags) | Stock code | `FinancialAnalyzer` |
 | `percentile-analyzer` | Historical percentile analysis (3M/1Y/3Y/5Y) | Stock code | Percentile calc |
@@ -608,7 +619,7 @@ stock-analyzer-skills_tushare/           # Project root
 │       │       │   ├── __init__.py
 │       │       │   ├── cache.py         # CacheManager
 │       │       │   └── report.py        # ReportGenerator (scoring + exports)
-│       │       └── skills/              # 17 skill entry points (thin wrapper)
+│       │       └── skills/              # 18 skill entry points (thin wrapper)
 │       │           ├── stock-analyzer/main.py
 │       │           ├── technical-analyzer/main.py
 │       │           ├── a-dividend-analyzer/main.py
@@ -625,7 +636,8 @@ stock-analyzer-skills_tushare/           # Project root
 │       │           ├── market-systemic-risk/main.py
 │       │           ├── industry-analysis/main.py
 │       │           ├── national-team-fund-tracker/main.py
-│       │           └── web-search/main.py
+│       │           ├── web-search/main.py
+│       │           └── cninfo-search/main.py
 │       └── [skill-name]/             # SKILL.md + legacy scripts
 │           ├── SKILL.md
 │           └── scripts/
@@ -643,7 +655,7 @@ stock-analyzer-skills_tushare/           # Project root
 | **Backward Compat** | `core/__init__.py` | 27 wrapper functions + 11 class exports, delegates to Analyzer classes |
 | **Analyzers** | `core/src/analyzers/` | 9 Analyzer classes, data fetching + business logic |
 | **Infrastructure** | `core/src/infra/` | CacheManager + ReportGenerator |
-| **Entry Points** | `core/src/skills/` | 17 skill `main.py` files, argument parsing + formatted output |
+| **Entry Points** | `core/src/skills/` | 18 skill `main.py` files, argument parsing + formatted output |
 
 ---
 
@@ -732,6 +744,8 @@ skill(name="web-search")
 skill(name="national-team-fund-tracker")
 skill(name="darwinian_value_investing")
 skill(name="munger_value_investing")
+skill(name="cninfo-search")
+skill(name="chronos-timeline")
 ```
 
 ### Command-line Usage
@@ -755,6 +769,10 @@ python .opencode/skills/core/src/skills/pdf-converter/main.py "file.pdf"
 python .opencode/skills/core/src/skills/akshare-docs/main.py "stock_zh_a_spot"
 python .opencode/skills/core/src/skills/web-search/main.py "query text"
 python .opencode/skills/core/src/skills/national-team-fund-tracker/main.py
+python .opencode/skills/core/src/skills/cninfo-search/main.py 600519
+python .opencode/skills/core/src/skills/chronos-timeline/main.py 600519 回购
+python .opencode/skills/core/src/skills/chronos-timeline/main.py 600338 锂矿 --relax --export-candidates cand.json
+python .opencode/skills/core/src/skills/chronos-timeline/main.py --build-report annotated.json
 ```
 
 ---
