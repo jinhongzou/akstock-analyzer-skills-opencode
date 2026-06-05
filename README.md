@@ -6,8 +6,22 @@
 
 # 基于Opencode的 A股分析 Skill 集
 
-基于 tushare/akshare  数据源的 A 股多维度分析 OpenCode Skills，覆盖 **盈利能力 (ROCE)/ 财务安全 / 估值合理性 / 技术面 / 股东分析 / 分红 / 新闻风险 / A股系统性风险等**  维度。
-**回测** SKILL开发中
+基于 **tushare/akshare** 免费数据源的 A 股多维度分析 OpenCode Skills，覆盖 **盈利能力 (ROCE) / 财务安全 / 估值合理性 / 技术面 / 股东分析 / 分红 / 新闻风险 / A股系统性风险等** 维度。**回测** SKILL 开发中...
+
+> 内置 **akshare-docs** Skill，可根据用户的分析需求自由查询 akshare 的 2000+ 个免费接口，找到所需数据源，无需翻阅文档
+
+
+## 项目优势
+
+| # | 优势 | 说明 |
+|---|------|------|
+| 1 | 🆓 **零成本，全免费** | 所有数据基于开源 tushare/akshare 接口，其中akshare无需任何付费 API Token 即可获取 A 股行情、财务、估值等全维度数据 |
+| 2 | 🔍 **akshare-docs 按需查询** | 内置 `akshare-docs` Skill，可根据你的分析需求自由查询 akshare 的 2000+ 个免费接口，找到所需数据源，无需翻阅文档 |
+| 3 | 🧩 **24+ 独立 Skill，自由组合** | 覆盖行情/财务/技术/股东/分红/风控/期货等维度，既可单独调用，也可通过 `report-builder` 一键输出完整报告 |
+| 4 | 🔄 **双数据源兜底** | Tushare Pro 优先 + akshare 自动降级，单个接口异常不影响分析流程 |
+| 5 | 📊 **交互式图表** | 支持 ECharts HTML 图表生成（国家队ETF追踪、碳酸锂期货价格走势等），可视化更直观 |
+| 6 | 🐍 **纯 Python 实现** | 仅需 `pip install`，无需额外服务或环境配置，命令行即可运行 |
+
 ## 特点
 
 - 🀆 **23 个独立 Skill**：可按需单独使用，也可一键输出完整投资报告
@@ -77,8 +91,8 @@ stock-analyzer-skills_tushare/           # 项目根目录
 │       │       │   ├── __init__.py
 │       │       │   ├── cache.py         # CacheManager（缓存）
 │       │       │   └── report.py        # ReportGenerator（评分 + 报告导出）
-│       │       └── skills/              # 19 个 Skill 入口（薄封装层）
-│       │           ├── stock-analyzer/main.py
+│   │       └── skills/              # 19 个 Skill 入口（薄封装层）
+│   │           ├── stock-analyzer/main.py
 │       │           ├── technical-analyzer/main.py
 │       │           ├── a-dividend-analyzer/main.py
 │       │           ├── buffett-checklist/main.py
@@ -114,7 +128,7 @@ stock-analyzer-skills_tushare/           # 项目根目录
 | **向后兼容层** | `core/__init__.py` | 27 个包装函数 + 11 个类导出，委托给下层 Analyzer 类 |
 | **分析器层** | `core/src/analyzers/` | 9 个 Analyzer 类，数据获取 + 计算逻辑 |
 | **基础设施层** | `core/src/infra/` | CacheManager + ReportGenerator |
-| **入口层** | `core/src/skills/` | 18 个 skill 的 `main.py`，参数解析 + 格式化输出 |
+| **入口层** | `core/src/skills/` | 19 个 skill 的 `main.py`，参数解析 + 格式化输出 |
 
 ---
 
@@ -549,11 +563,22 @@ MIT
 
 A multi-dimensional A-share stock analysis OpenCode Skill set based on **Tushare Pro** and **akshare** data sources. Covers **profitability (ROCE) / financial safety / valuation / technical analysis / shareholder analysis / dividends / news risk / systemic market risk** dimensions.
 
-> ⚠️ **Backtesting** SKILL is under development
+> ⚠️ Built-in `akshare-docs` Skill lets you search 2000+ free akshare APIs based on your analysis needs — no documentation hunting.
+
+## Advantages
+
+| # | Advantage | Description |
+|---|-----------|-------------|
+| 1 | 🆓 **Zero Cost** | All data from free open-source APIs (akshare). No paid tokens required for full-dimensional A-share data access |
+| 2 | 🔍 **akshare-docs On-Demand Query** | Built-in `akshare-docs` Skill lets you search 2000+ free akshare APIs based on your analysis needs — no documentation hunting |
+| 3 | 🧩 **24+ Independent Skills** | Modular design covering quotes/financials/technicals/shareholders/dividends/risk/futures. Use individually or combine into full reports via `report-builder` |
+| 4 | 🔄 **Dual Data Source Fallback** | Tushare Pro preferred + akshare auto-fallback. Single API failure doesn't break analysis |
+| 5 | 📊 **Interactive Charts** | ECharts HTML report generation (national team ETF tracker, lithium futures price charts, etc.) for better visualization |
+| 6 | 🐍 **Pure Python** | Just `pip install`, no external services or environment setup, runs from command line |
 
 ## Features
 
-- 🀆 **22 Independent Skills**: Use individually or combine for a full investment report
+- 🀆 **24 Independent Skills**: Use individually or combine for a full investment report
 - 🔆 **Shared Core Architecture**: All skills share the `core/` logic layer for data consistency and zero code duplication
 - 🆓 **6-Dimension Scoring System**: Profitability / Financial Safety / Valuation / Technicals / Business Outlook / News Risk — 120 points total
 - 🆗 **Multi-Source Data**: Tushare Pro (valuation/quotas) + Sina Finance (financial statements/K-line) + East Money (news/dividends) + Legu (market PE)
@@ -619,8 +644,8 @@ stock-analyzer-skills_tushare/           # Project root
 │       │       │   ├── __init__.py
 │       │       │   ├── cache.py         # CacheManager
 │       │       │   └── report.py        # ReportGenerator (scoring + exports)
-│       │       └── skills/              # 18 skill entry points (thin wrapper)
-│       │           ├── stock-analyzer/main.py
+│   │       └── skills/              # 19 skill entry points (thin wrapper)
+│   │           ├── stock-analyzer/main.py
 │       │           ├── technical-analyzer/main.py
 │       │           ├── a-dividend-analyzer/main.py
 │       │           ├── buffett-checklist/main.py
@@ -655,7 +680,7 @@ stock-analyzer-skills_tushare/           # Project root
 | **Backward Compat** | `core/__init__.py` | 27 wrapper functions + 11 class exports, delegates to Analyzer classes |
 | **Analyzers** | `core/src/analyzers/` | 9 Analyzer classes, data fetching + business logic |
 | **Infrastructure** | `core/src/infra/` | CacheManager + ReportGenerator |
-| **Entry Points** | `core/src/skills/` | 18 skill `main.py` files, argument parsing + formatted output |
+| **Entry Points** | `core/src/skills/` | 19 skill `main.py` files, argument parsing + formatted output |
 
 ---
 

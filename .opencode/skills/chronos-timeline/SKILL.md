@@ -314,21 +314,9 @@ output/{股票代码}_{关键词}_chronos.html
 
 | 场景 | 操作 |
 |------|------|
-| **分析完成后** | 建议清理 `output/` 目录下对应的 HTML 文件，避免过时报告积累 |
-| **重新分析同股票+同关键词** | 新报告会**覆盖**旧文件，无需手动清理 |
-| **共享或提交代码时** | `output/` 目录已在 `.gitignore` 中配置，不会进入版本控制，但仍建议手动删除不需要的报告文件 |
+| **分析完成后** | 建议清理此次分析过程产生的临时文件 |
 
-### 清理命令
-
-```bash
-# 删除单次分析报告
-rm output/600519_回购_chronos.html
-
-# 清空所有生成报告
-rm output/*_chronos.html
-```
-
-> **注意**：`output/` 目录也用于其他 Skill 的输出文件（如 report-builder），`rm output/*_chronos.html` 只会删除 chronos-timeline 的报告，不会影响其他文件。
+> **注意**：`output/` 目录也用于其他 Skill 的输出文件（如 report-builder）。
 
 ---
 
